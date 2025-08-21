@@ -1,0 +1,21 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+
+<PageTitle>Home</PageTitle>
+
+<button @onclick="ConnectWithStrava">Connect with Strava</button>
+
+@code {
+    private void ConnectWithStrava()
+    {
+        string clientId = "13023";
+        string redirectUri = "https://localhost:7010/auth-strava";
+        string scope = "activity:read";
+
+        string authorizationUrl = $"https://www.strava.com/oauth/authorize?client_id={clientId}" +
+                                  $"&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+                                  $"&approval_prompt=auto&scope={Uri.EscapeDataString(scope)}";
+
+        Navigation.NavigateTo(authorizationUrl, forceLoad: true);
+    }
+}

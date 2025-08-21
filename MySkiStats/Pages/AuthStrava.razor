@@ -1,0 +1,112 @@
+﻿@page "/auth-strava"
+@using System.Text.Json.Serialization
+@using MySkiStats.Services
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject TokenService TokenService
+
+<h3>Auth_strava</h3>
+
+<button @onclick="GetActivities">Get activities</button>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryParams.TryGetValue("code", out var code))
+        {
+            // Wymień kod na token
+            var tokenResponse = await ExchangeCodeForToken(code);
+
+            if (tokenResponse != null)
+            {
+                TokenService.AccessToken = tokenResponse.AccessToken;
+                // Token mamy - możemy pobrać aktywności
+                //var activities = await GetActivities(tokenResponse.AccessToken);
+
+                // Zrób coś z aktywnościami, np. zapisz lub wyświetl
+                // ...
+            }
+            else
+            {
+                // Obsłuż błąd wymiany tokena
+            }
+        }
+        else
+        {
+            // Brak kodu w adresie - błąd autoryzacji
+        }
+    }
+
+    private async Task<TokenResponse?> ExchangeCodeForToken(string code)
+    {
+        var clientId = "13023";
+        var clientSecret = "eb651c727a8c6a2956aec03f00bf3c6cb3dc8cd8";
+        var redirectUri = "https://localhost:7010/auth-strava"; // ten sam co w autoryzacji
+
+        var requestData = new Dictionary<string, string>
+        {
+            { "client_id", clientId },
+            { "client_secret", clientSecret },
+            { "code", code },
+            { "grant_type", "authorization_code" },
+            { "redirect_uri", redirectUri }
+        };
+
+        var requestContent = new FormUrlEncodedContent(requestData);
+
+        var response = await Http.PostAsync("https://www.strava.com/oauth/token", requestContent);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            return System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(json);
+        }
+
+        return null;
+    }
+
+    private async Task<List<Activity>?> GetActivities()
+    {
+        var accessToken = TokenService.AccessToken;
+        Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await Http.GetAsync("https://www.strava.com/api/v3/athlete/activities?type=BackcountrySki");
+
+        if (response.IsSuccessStatusCode)
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            return System.Text.Json.JsonSerializer.Deserialize<List<Activity>>(json);
+        }
+
+        return null;
+    }
+
+    // Modele danych - uproszczone przykłady
+    public class TokenResponse
+    {
+        [JsonPropertyName("token_type")]
+        public string TokenType { get; set; } = default!;
+
+        [JsonPropertyName("access_token")]
+        public string AccessToken { get; set; } = default!;
+
+        [JsonPropertyName("expires_at")]
+        public long ExpiresAt { get; set; }
+
+        [JsonPropertyName("expires_in")]
+        public int ExpiresIn { get; set; }
+
+        [JsonPropertyName("refresh_token")]
+        public string RefreshToken { get; set; } = default!;
+    }
+
+    public class Activity
+    {
+        public string Name { get; set; } = default!;
+        public DateTime StartDate { get; set; }
+        public float Distance { get; set; }
+    }
+}
