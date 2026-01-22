@@ -1,0 +1,6 @@
+@MySkiStats.Api_HostAddress = http://localhost:5263
+
+GET {{MySkiStats.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
