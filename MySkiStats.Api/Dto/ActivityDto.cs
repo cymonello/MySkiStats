@@ -1,10 +1,9 @@
-namespace MySkiStats.Api.Models;
+﻿namespace MySkiStats.Api.Dto;
 
-public class Activity
+public class ActivityDto
 {
     public int Id { get; set; }
     public long StravaId { get; set; }
-    public int ActivityTypeId { get; set; }
     public int AthleteId { get; set; }
     public DateTime Date { get; set; }
     public string Name { get; set; } = default!;
@@ -17,8 +16,5 @@ public class Activity
     public int? AthleteGearId { get; set; }
     public string? Comments { get; set; }
     public int Runs { get; set; }
-    
-    public ActivityType ActivityType { get; set; } = null!;
-    public Athlete Athlete { get; set; } = null!;
-    public AthleteGear? AthleteGear { get; set; }
+    public string ActivityTypeName { get; set; } = default!;
 }

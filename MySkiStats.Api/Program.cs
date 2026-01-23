@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MySkiStats.Api.Data;
+using MySkiStats.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient<StravaService>();
+builder.Services.AddScoped<ActivitySyncService>();
 //builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options =>
@@ -16,7 +19,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowBlazorWasm", policy =>
     {
         policy.WithOrigins(builder.Environment.IsDevelopment() 
-            ? "https://localhost:5001" 
+            ? "https://localhost:7010" 
             : "https://localhost")
             .AllowAnyMethod()
             .AllowAnyHeader();

@@ -1,3 +1,5 @@
+using MySkiStats.Api.Dto;
+
 namespace MySkiStats.Api.Models;
 
 public class Athlete
@@ -7,4 +9,10 @@ public class Athlete
     
     public ICollection<AthleteGear> Gears { get; set; } = [];
     public ICollection<Activity> Activities { get; set; } = [];
+
+    public AthleteDto ToDto() => new()
+    {
+        Id = Id,
+        StravaId = StravaId
+    };
 }

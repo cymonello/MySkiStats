@@ -27,6 +27,9 @@
                         <th>Name</th>
                         <th>Date</th>
                         <th>Distance (km)</th>
+                        <th>Elevation (m)</th>
+                        <th>Elapsed time</th>
+                        <th>Moving time</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,8 +37,11 @@
                     {
                         <tr>
                             <td>@activity.Name</td>
-                            <td>@activity.StartDate.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>@(activity.Distance / 1000).ToString("F2")</td>
+                            <td>@activity.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@(activity.Distance / 1000)</td>
+                            <td>@(activity.Elevation)</td>
+                            <td>@FormatTime(activity.ElapsedTime)</td>
+                            <td>@FormatTime(activity.MovingTime)</td>
                         </tr>
                     }
                 </tbody>
@@ -218,59 +224,32 @@
 
     private async Task RefreshActivities()
     {
+        IsLoading = true;
+        ErrorMessage = null;
+
         try
         {
-            IsLoading = true;
-            ErrorMessage = null;
+            var response = await Http.PostAsJsonAsync(
+                "https://localhost:7087/api/athletes/sync",
+                new { accessToken = TokenService.AccessToken });
 
-            if (TokenService.IsTokenExpired() && !await RefreshAccessToken())
+            if (response.IsSuccessStatusCode)
             {
-                ErrorMessage = "Session expired. Please reconnect.";
-                IsAuthenticated = false;
-                return;
+                var result = await response.Content.ReadFromJsonAsync<ActivitySyncResponse>();
+                Activities = result.Activities;
             }
-
-            Activities = await GetActivities();
-
-            if (Activities == null)
+            else
             {
-                ErrorMessage = "Failed to fetch activities from Strava.";
+                ErrorMessage = "Failed to sync activities";
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Error loading activities: {ex.Message}";
+            ErrorMessage = $"Error: {ex.Message}";
         }
         finally
         {
             IsLoading = false;
-        }
-    }
-
-    private async Task<List<Activity>?> GetActivities()
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(TokenService.AccessToken))
-                return null;
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, "https://www.strava.com/api/v3/athlete/activities?type=BackcountrySki");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TokenService.AccessToken);
-
-            var response = await Http.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                return System.Text.Json.JsonSerializer.Deserialize<List<Activity>>(json);
-            }
-
-            return null;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"API error: {ex.Message}";
-            return null;
         }
     }
 
@@ -282,15 +261,45 @@
         ErrorMessage = null;
     }
 
+    private string FormatTime(double totalSeconds)
+    {
+        var timeSpan = TimeSpan.FromSeconds(totalSeconds);
+
+        if (timeSpan.Hours > 0)
+            return $"{timeSpan.Hours}h {timeSpan.Minutes}m {timeSpan.Seconds}s";
+
+        if (timeSpan.Minutes > 0)
+            return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
+
+        return $"{timeSpan.Seconds}s";
+    }
+
+    public class ActivitySyncResponse
+    {
+        public List<Activity> Activities { get; set; } = [];
+    }
+
     public class Activity
     {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; } = default!;
 
-        [JsonPropertyName("start_date")]
-        public DateTime StartDate { get; set; }
-
         [JsonPropertyName("distance")]
         public float Distance { get; set; }
+
+        [JsonPropertyName("date")]
+        public DateTime Date { get; set; }
+
+        [JsonPropertyName("ascent")]
+        public float Elevation { get; set; }
+
+        [JsonPropertyName("movingTime")]
+        public float MovingTime { get; set; }
+
+        [JsonPropertyName("elapsedTime")]
+        public float ElapsedTime { get; set; }
     }
 }
